@@ -6,7 +6,7 @@ import tensorflow as tf
 
 
 class Ai:
-    def __init__(self, model=None, mutation_rate=0.01):
+    def __init__(self, index, model=None, mutation_rate=0.01):
         """
         Initialize a GeneticModel instance.
 
@@ -14,9 +14,10 @@ class Ai:
         - model: Pre-existing Keras model to use. If None, a new model will be randomly initialized.
         - mutation_rate: Rate of mutation to apply when creating a mutated model.
         """
+        self.index = index
         if model is None:
             self.model = tf.keras.Sequential([
-                tf.keras.layers.Dense(16, input_shape=(4,), activation='relu'),
+                tf.keras.layers.Dense(4, input_shape=(4,), activation='relu'),
                 tf.keras.layers.Dense(1, activation='sigmoid')
             ])
             for layer in self.model.layers:
@@ -48,6 +49,8 @@ class Game:
         pygame.init()
         self.width, self.height = 1000, 600
         self.screen = pygame.display.set_mode((self.width, self.height))
+        self.clock = pygame.time.Clock()
+        self.FPS = 60
         self.hole = 175
         self.gap = 175
         self.running = True
@@ -63,6 +66,7 @@ class Game:
         self.ai_values = np.array([])
         self.num_rndm = algorithm_random
         self.num_ai = ai
+        self.ai_gen = 0
         if human:
             self.human = np.array([500, 0, 0])
         if algorithm > 0:
@@ -70,9 +74,10 @@ class Game:
         if algorithm_random > 0:
             self.algorithm_random = np.array([[500, 0, 0] for _ in range(algorithm_random)])
         if ai > 0:
-            self.ai = [Ai() for _ in range(ai)]
+            self.ai = [Ai(i) for i in range(ai)]
             self.ai_values = np.array([[500, 0, 0] for _ in range(ai)])
         self.top_ai = []
+        self.old_ai = self.ai
 
     def draw(self):
         self.screen.fill((0, 0, 0))
@@ -116,10 +121,13 @@ class Game:
             algorithm_random_score_text_surface = font.render(score_text, True, (0, 0, 0))
             text_width = max(algorithm_random_score_text_surface.get_width(), text_width)
         if len(self.ai_values) > 0:
-            y += 20
+            y += 40
             max_val = max([a[2] for a in self.ai_values])
-            score_text = f"Ai: {max_val}"
+            score_text = f"Ai Points: {max_val}"
             ai_score_text_surface = font.render(score_text, True, (0, 0, 0))
+            score_text = f"Ai Generation: {self.ai_gen}"
+            ai_gen_text_surface = font.render(score_text, True, (0, 0, 0))
+            text_width = max(ai_gen_text_surface.get_width(), text_width)
 
         pygame.draw.rect(self.screen, (255, 255, 255),
                          pygame.Rect(10, 10, max(100, text_width + 10), y + 11))
@@ -140,6 +148,8 @@ class Game:
         if len(self.ai_values) > 0:
             y += 20
             self.screen.blit(ai_score_text_surface, (15, y))
+            y += 20
+            self.screen.blit(ai_gen_text_surface, (15, y))
         pygame.display.flip()
 
     def check_collision(self, ball):
@@ -249,14 +259,16 @@ class Game:
                     new_ai_list.append(ai)
             self.ai = new_ai_list
 
-            self.top_ai.extend(self.ai)
+            self.top_ai.extend([ai.index for ai in self.ai])
             if len(self.top_ai) > self.num_ai:
                 self.top_ai = self.top_ai[-self.num_ai:]
 
             if len(self.ai_values) == 0 and self.num_ai > 0:
-                self.ai = [Ai(ai.model) for ai in self.top_ai]
+                self.ai_gen += 1
+                self.ai = [Ai(idx, self.old_ai[ai].model) for idx, ai in enumerate(self.top_ai)]
                 while len(self.ai) < self.num_ai:
-                    self.ai.append(Ai())
+                    idx = len(self.ai)
+                    self.ai.append(Ai(idx))
                 self.ai_values = np.array([[self.height - self.bars[0] - 50, 0, 0] for _ in range(self.num_ai)])
 
             # add points if new hole is passed
@@ -276,11 +288,9 @@ class Game:
                 self.pos = 0
                 self.bars = np.delete(self.bars, 0)
                 self.bars = np.append(self.bars, random.randint(100, self.height - 100 - self.hole))
-            pygame.time.delay(25)
-            if self.pos == 10:
-                break
+            self.clock.tick(self.FPS)
 
 
 if __name__ == '__main__':
-    game = Game(human=False, algorithm=0, algorithm_random=0, ai=10)
+    game = Game(human=False, algorithm=0, algorithm_random=0, ai=3)
     game.run()
