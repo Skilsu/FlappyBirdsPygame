@@ -21,3 +21,5 @@ The video is buffering/freezing due to insufficient processing power on my lapto
 ### Contributing
 While the current code is fairly functional, it could benefit from the following contributions:
 * adding a good looking GUI (Pictures to include instead of circles and rectangles)
+* saving the generated ai models
+* adding game and GUI functionality by implementing more buttons for the generation of new players and maybe end conditions to end the game if a certain player dies
